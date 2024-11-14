@@ -8,6 +8,7 @@ This assignment reinforces ideas in [Iteration](https://p8105.com/topic_iteratio
 
 ```{r setup, include = FALSE, message = FALSE, warning = FALSE}
 library(tidyverse)
+set.seed(123)
 
 knitr::opts_chunk$set(
 	echo = TRUE,
@@ -65,9 +66,43 @@ sim_res |>
 ```
 
 **Comment** : The plot shows an increasing trend in the probability that at least two people share a birthday as the group size grows. The probability starts near zero for small groups but rises quickly, reaching around 50% by a group size of 23, and approaching nearly 100% by a group size of 50. The increasing rate is biggest around a group size of 23 and smallest around 0 and 50. This plot demonstrates how the likelihood of shared birthdays increases as more people are added.
+
 # Problem 2
+Define the function to save 𝜇̂ and the p-value arising from a test of 𝐻:𝜇=0 using 𝛼=0.05.
 ```{r}
+# Set parameters
+n<- 30
+sigma <- 5
+alpha <- 0.05
 ```
+
+```{r}
+# Define t_test function  
+t_test = function(mu) {
+  
+  sample_data = rnorm(n, mean = mu, sd = sigma)
+  
+  t_stat = t.test(sample_data, mu = 0) |>
+    broom::tidy() |>
+    select(estimate, p.value)
+  
+  return(t_stat)
+}
+```
+
+```{r}
+# Simulation for 5000 datasets for each mu value and store results
+sim_result_df =
+  expand_grid(
+    mu = 0:6,
+    iter = 1:5000 )|>
+  mutate(
+    estimate_df = map(mu, t_test)
+  )|> 
+  unnest(estimate_df)
+```
+
+
 
 # Problem 3
 ```{r}
