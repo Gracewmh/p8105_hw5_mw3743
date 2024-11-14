@@ -91,7 +91,7 @@ t_test = function(mu) {
 ```
 
 ```{r}
-# Simulation for 5000 datasets for each mu value and store results
+# Simulation for 5000 datasets for each mu(1-6) value and store results
 sim_result_df =
   expand_grid(
     mu = 0:6,
@@ -101,7 +101,31 @@ sim_result_df =
   )|> 
   unnest(estimate_df)
 ```
+Make a plot showing the proportion of times the null was rejected (the power of the test) on the y axis and the true value of 𝜇
+ on the x axis. Describe the association between effect size and power.
+```{r}
+sim_result_df |>
+  group_by(mu) |>
+  summarize(
+    power = mean(p.value < alpha), .groups = 'drop')|>
+  ggplot( aes(x = mu, y = power)) +
+    geom_line() +
+    geom_point() +
+    labs(
+      title = "Power of the t-Test ",
+      x = "True Value of μ",
+      y = "Power (Proportion of Null Rejections)"
+    ) +
+    theme_minimal()
+```
 
+**Comment** : The plot demonstrates that power increases with effect size; as the true mean (𝜇) becomes larger, the probability of rejecting the null hypothesis rises. For small effect sizes, power is low, but it approaches 1 as μ grows, indicating that larger effects are easier to detect. This highlights the positive relationship between effect size and the test's ability to detect a true effect.
+
+
+Make a plot showing the average estimate of 𝜇̂ on the y axis and the true value of 𝜇 on the x axis. Make a second plot (or overlay on the first) the average estimate of 𝜇̂ only in samples for which the null was rejected on the y axis and the true value of 𝜇on the x axis. Is the sample average of 𝜇̂ across tests for which the null is rejected approximately equal to the true value of 𝜇? Why or why not?
+```{r}
+
+```
 
 
 # Problem 3
