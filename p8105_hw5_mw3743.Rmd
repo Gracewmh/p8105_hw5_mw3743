@@ -134,8 +134,7 @@ sim_result_df |>
     theme_minimal()
 ```
 
-**Comment** : The plot demonstrates that power increases with effect size; as the true mean (𝜇) becomes larger, the probability of rejecting the null hypothesis rises.When μ is small (close to 0), the power is low, indicating a low probability of detecting a true effect.As μ increases, the power steadily rises, and by the time μ reaches around 4, the power approaches 1, meaning the test is highly likely to reject the null hypothesis when it is false. This highlights the positive relationship between effect size and the test's ability to detect a true effect.
-
+**Comment** : The plot demonstrates that power increases with effect size; as the true mean (𝜇) becomes larger, the probability of rejecting the null hypothesis rises.When μ is small (close to 0), the power is low, indicating a low probability of detecting a true effect.As μ increases, the power steadily rises, and by the time μ reaches around 4, the power approaches 1, meaning the test is highly likely to reject the null hypothesis when it is false. This highlights the positive relationship between effect size and the test's ability to detect a true effect.<br>
 
 Make a plot showing the average estimate of 𝜇̂ on the y axis and the true value of 𝜇 on the x axis.
 ```{r}
@@ -153,7 +152,8 @@ sim_result_df |>
     ) +
     theme_minimal()
 ```
- Make a second plot (or overlay on the first) the average estimate of 𝜇̂ only in samples for which the null was rejected on the y axis and the true value of 𝜇on the x axis. Is the sample average of 𝜇̂ across tests for which the null is rejected approximately equal to the true value of 𝜇? Why or why not?
+
+Make a second plot (or overlay on the first) the average estimate of 𝜇̂ only in samples for which the null was rejected on the y axis and the true value of 𝜇on the x axis. Is the sample average of 𝜇̂ across tests for which the null is rejected approximately equal to the true value of 𝜇? Why or why not?
 ```{r}
 sim_result_df |>
   group_by(mu) |>
@@ -174,9 +174,84 @@ sim_result_df |>
 ```
 
 **Is the sample average of 𝜇̂ across tests for which the null is rejected approximately equal to the true value of μ? **
-The sample average of 𝜇̂ across tests for which the null hypothesis is rejected is not approximately equal to the true value of μ, especially for smaller values of μ.
+The sample average of 𝜇̂ across tests for which the null hypothesis is rejected is not approximately equal to the true value of μ, especially for smaller values of μ.<br>
 **Why or why not?**: When we only consider samples where the null hypothesis was rejected, we introduce selection bias. This occurs because we are selectively choosing samples that show stronger evidence against the null hypothesis, which typically results in larger observed estimates. When the true effect size is small, only the samples with higher-than-average estimates of 𝜇̂ will have a significant p-value, and thus only those are included in the "null rejected" category.However, when the true effect size is big, this bias is reduced, resulting in the estimated value close to the true value. 
 
 # Problem 3
+Load the raw dataset
 ```{r}
+homicide_raw = read_csv("https://raw.githubusercontent.com/washingtonpost/data-homicides/refs/heads/master/homicide-data.csv")
 ```
+**Describe the raw data**<br>
+This dataset has 52,179 records about incidents involving victims, with 12 columns describing each case. Each record has a unique ID, the date it was reported (reported_date), and victim information such as last name (victim_last), first name (victim_first), race (victim_race), age (victim_age), and sex (victim_sex), ect. The location of the incident is listed by city, state, and geographic coordinates (latitude and longitude). The last column, disposition, shows the outcome of the case, like "Closed without arrest" or "Closed by arrest." <br>
+
+
+Create a city_state variable (e.g. “Baltimore, MD”) and then summarize within cities to obtain the total number of homicides and the number of unsolved homicides (those for which the disposition is “Closed without arrest” or “Open/No arrest”).
+```{r}
+homicide_unsolved = homicide_raw |>
+  mutate(
+    city_state = str_c(city, ",", state)) |>
+  group_by(city_state)|>
+  summarize(
+    total_homicides = n(),
+    total_unsolved = sum(disposition == "Closed without arrest" | disposition == "Open/No arrest")
+  )
+```
+
+
+For the city of Baltimore, MD, use the `prop.test` function to estimate the proportion of homicides that are unsolved; save the output of `prop.test` as an R object, apply the broom::tidy to this object and pull the estimated proportion and confidence intervals from the resulting tidy dataframe.
+```{r}
+baltimore = homicide_unsolved|>
+  filter(city_state == "Baltimore,MD")
+
+
+baltimore_prop_test =  prop.test(
+  x = baltimore$total_unsolved,
+  n = baltimore$total_homicides
+)
+
+broom::tidy(baltimore_prop_test) |>
+  select(estimate, conf.low, conf.high)|>  
+  knitr::kable()
+  
+```
+Now run prop.test for each of the cities in your dataset, and extract both the proportion of unsolved homicides and the confidence interval for each. Do this within a “tidy” pipeline, making use of purrr::map, purrr::map2, list columns and unnest as necessary to create a tidy dataframe with estimated proportions and CIs for each city.
+```{r}
+cities_prop_test = homicide_unsolved|>
+  mutate(
+    prop_test_result = map2(
+      total_unsolved,
+      total_homicides,
+      ~ prop.test (x=.x,n=.y)),
+    tidy_result = map (prop_test_result, broom::tidy)
+  )|>
+  select(city_state, tidy_result) |>
+  unnest()|>
+  select(city_state, estimate, conf.low, conf.high)
+
+cities_prop_test |>
+  knitr::kable()
+```
+
+
+Create a plot that shows the estimates and CIs for each city – check out geom_errorbar for a way to add error bars based on the upper and lower limits. Organize cities according to the proportion of unsolved homicides.
+
+```{r}
+cities_prop_test |>
+  mutate(
+    city_state = reorder(city_state, estimate)
+  )|>
+  ggplot(aes(x = city_state, y = estimate)) +
+  geom_point() +
+  geom_errorbar(aes(ymin = conf.low, ymax = conf.high), width = 0.2) +
+  coord_flip()+
+  labs(
+    title = "Proportion of Unsolved Homicides by City, State",
+    x = "City, State",
+    y = "Proportion of Unsolved Homicides",
+    caption = "Error bars represent 95% CI"
+  ) +
+  theme_minimal(base_size = 6) 
+```
+
+
