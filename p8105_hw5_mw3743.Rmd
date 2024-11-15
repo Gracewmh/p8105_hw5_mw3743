@@ -57,7 +57,8 @@ sim_res =
 ```{r}
 sim_res |> 
   ggplot(aes(x = n, y = prob )) + 
-  geom_line()+
+  geom_point(alpha=0.5) +
+  geom_smooth()+
   labs(
     x= "Group Size (n)",
     y= "Probability",
@@ -71,16 +72,13 @@ sim_res |>
 Define the function to save 𝜇̂ and the p-value arising from a test of 𝐻:𝜇=0 using 𝛼=0.05.
 ```{r}
 # Set parameters
-n<- 30
-sigma <- 5
-alpha <- 0.05
-```
 
-```{r}
+alpha <- 0.05
+
 # Define t_test function  
 t_test = function(mu) {
   
-  sample_data = rnorm(n, mean = mu, sd = sigma)
+  sample_data = rnorm(30, mean = mu, sd = 5)
   
   t_stat = t.test(sample_data, mu = 0) |>
     broom::tidy() |>
@@ -91,16 +89,33 @@ t_test = function(mu) {
 ```
 
 ```{r}
-# Simulation for 5000 datasets for each mu(1-6) value and store results
-sim_result_df =
+# Generate 5000 dataset for mu = 0
+sim_result_mu0 = 
+  tibble(
+    mu = 0,
+    iter = 1:5000
+  ) |>
+  mutate(
+    estimate_df = map(mu, t_test)
+  ) |> 
+  unnest(estimate_df)
+```
+
+```{r}
+# Simulation for each mu(1-6) value and store results
+sim_result_mu1_6 =
   expand_grid(
-    mu = 0:6,
+    mu = 1:6,
     iter = 1:5000 )|>
   mutate(
     estimate_df = map(mu, t_test)
   )|> 
   unnest(estimate_df)
+
+# Combine the two datasets
+sim_result_df = bind_rows(sim_result_mu0, sim_result_mu1_6)
 ```
+
 Make a plot showing the proportion of times the null was rejected (the power of the test) on the y axis and the true value of 𝜇
  on the x axis. Describe the association between effect size and power.
 ```{r}
@@ -114,7 +129,7 @@ sim_result_df |>
     labs(
       title = "Power of the t-Test ",
       x = "True Value of μ",
-      y = "Power (Proportion of Null Rejections)"
+      y = "Power (proportion of times the null was rejected)"
     ) +
     theme_minimal()
 ```
