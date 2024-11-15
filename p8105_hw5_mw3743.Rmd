@@ -134,14 +134,48 @@ sim_result_df |>
     theme_minimal()
 ```
 
-**Comment** : The plot demonstrates that power increases with effect size; as the true mean (𝜇) becomes larger, the probability of rejecting the null hypothesis rises. For small effect sizes, power is low, but it approaches 1 as μ grows, indicating that larger effects are easier to detect. This highlights the positive relationship between effect size and the test's ability to detect a true effect.
+**Comment** : The plot demonstrates that power increases with effect size; as the true mean (𝜇) becomes larger, the probability of rejecting the null hypothesis rises.When μ is small (close to 0), the power is low, indicating a low probability of detecting a true effect.As μ increases, the power steadily rises, and by the time μ reaches around 4, the power approaches 1, meaning the test is highly likely to reject the null hypothesis when it is false. This highlights the positive relationship between effect size and the test's ability to detect a true effect.
 
 
-Make a plot showing the average estimate of 𝜇̂ on the y axis and the true value of 𝜇 on the x axis. Make a second plot (or overlay on the first) the average estimate of 𝜇̂ only in samples for which the null was rejected on the y axis and the true value of 𝜇on the x axis. Is the sample average of 𝜇̂ across tests for which the null is rejected approximately equal to the true value of 𝜇? Why or why not?
+Make a plot showing the average estimate of 𝜇̂ on the y axis and the true value of 𝜇 on the x axis.
 ```{r}
-
+sim_result_df |>
+  group_by(mu) |>
+  summarize(
+    avg_mu = mean(estimate), .groups = 'drop')|>
+  ggplot( aes(x = mu, y = avg_mu) )+
+  geom_line() +
+  geom_point() +
+  labs(
+      title = "Average Estimate of Sample Mean (μ̂) vs True Value of Population Mean (μ)",
+      x = "True Value of μ",
+      y = "Average Estimate of μ̂"
+    ) +
+    theme_minimal()
+```
+ Make a second plot (or overlay on the first) the average estimate of 𝜇̂ only in samples for which the null was rejected on the y axis and the true value of 𝜇on the x axis. Is the sample average of 𝜇̂ across tests for which the null is rejected approximately equal to the true value of 𝜇? Why or why not?
+```{r}
+sim_result_df |>
+  group_by(mu) |>
+  summarize(
+    avg_mu_hat = mean(estimate),  
+    avg_mu_hat_rejected = mean(estimate[p.value < 0.05]),  
+    .groups = 'drop'
+  ) |>
+  ggplot(aes(x = mu)) +
+  geom_line(aes(y = avg_mu_hat, color = "All Samples"), linetype = "solid") +
+  geom_point(aes(y = avg_mu_hat, color = "All Samples")) +
+  geom_line(aes(y = avg_mu_hat_rejected, color = "Null Rejected Samples"), linetype = "solid") +
+  geom_point(aes(y = avg_mu_hat_rejected, color = "Null Rejected Samples")) +
+  labs(
+    title = "Average Estimate of Sample Mean (μ̂) vs True Value of Population Mean (μ)",
+    x = "True Value of μ", y = "Average Estimate of μ̂", color = "Sample Type" ) +
+  theme_minimal()
 ```
 
+**Is the sample average of 𝜇̂ across tests for which the null is rejected approximately equal to the true value of μ? **
+The sample average of 𝜇̂ across tests for which the null hypothesis is rejected is not approximately equal to the true value of μ, especially for smaller values of μ.
+**Why or why not?**: When we only consider samples where the null hypothesis was rejected, we introduce selection bias. This occurs because we are selectively choosing samples that show stronger evidence against the null hypothesis, which typically results in larger observed estimates. When the true effect size is small, only the samples with higher-than-average estimates of 𝜇̂ will have a significant p-value, and thus only those are included in the "null rejected" category.However, when the true effect size is big, this bias is reduced, resulting in the estimated value close to the true value. 
 
 # Problem 3
 ```{r}
